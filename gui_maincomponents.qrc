@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="newPrefix">
+    <file>sa.png</file>
+    <file>asfsf.png</file>
+    <file>das.png</file>
+  </qresource>
+</RCC>
