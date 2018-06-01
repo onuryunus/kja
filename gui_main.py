@@ -227,7 +227,7 @@ class Ui_MainWindow(object):
         self.disconnectbutton.setText(_translate("MainWindow", "Disconnect", None))
 
 from pyqtgraph import PlotWidget
-import yunus_rc
+import gui_maincomponents_rc
 
 if __name__ == "__main__":
     import sys
