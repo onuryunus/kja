@@ -1,41 +1,51 @@
+#include <EEPROM.h>
+#include <SoftwareSerial.h>
 #include <SPI.h>
 #include <SD.h>
 #include <ADXL345dual.h>
 #include <Wire.h>
 
-
 File myFile;
 ADXL345 device;
 String fileName = String();
-int firstsensor = 0;
-int secondsensor = 1;
+const int rxpin = 7;
+const int txpin = 6;
+char k = 'A';
+unsigned int filenumber;
+SoftwareSerial bluetooth(rxpin, txpin);
+int Sdo = 9;
 int Cs = 8;
 int Button_start = 2 ;
-int Button_stop = 3 ;
-int start_led = 5;
-int Sdo = 9;
+int Button_stop = 4 ;
+int Button_bluetooth = 3;
+int buzzer = 5;
+int firstsensor = 0;
+int secondsensor = 1;
 volatile bool recycle;
-int Buzzer = 6;
-
-void setup() {
-  recycle = false ;
+char inputString [100];
+char inputChar;
+int stringIndex = 0;
+void setup()
+{
+  recycle = false;
+  pinMode(Cs, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+  digitalWrite(Cs, HIGH);
+  pinMode(Sdo, OUTPUT);
+  digitalWrite(Sdo, HIGH);
+  pinMode(Button_start, INPUT_PULLUP);
+  pinMode(Button_stop, INPUT_PULLUP);
+  pinMode(Button_bluetooth, INPUT_PULLUP);
 
   Serial.begin(9600);
-
   Serial.println("SD kart yukleniyor.");
   if (!SD.begin(10)) {
     Serial.println("Yukleme basarisiz!");
     while (1);
   }
   Serial.println("SD kart yukleme basarılı.");
-  
-  pinMode(Buzzer, OUTPUT);
-  pinMode(Cs, OUTPUT);
-  digitalWrite(Cs, HIGH);
-  pinMode(Sdo, OUTPUT);
-  digitalWrite(Sdo, HIGH);
-  pinMode(Button_start, INPUT_PULLUP);
-  pinMode(Button_stop, INPUT_PULLUP);
+  bluetooth.begin(115200);
 
   device.begin(firstsensor);
   device.setDataRate(firstsensor, ADXL345_DATARATE_200HZ);
@@ -44,38 +54,69 @@ void setup() {
   device.begin(secondsensor);
   device.setDataRate(secondsensor, ADXL345_DATARATE_200HZ);
   device.setRange(secondsensor, ADXL345_RANGE_2G);
-  
-  if (!device.begin(firstsensor))
-  {
-    Serial.println("Sensor yüklenemedi.");
-    delay(500);
-  }
-  if (!device.begin(secondsensor))
-  {
-    Serial.println("bulunamadı");
-    delay(500);
-  }
 }
 
 void loop() {
+
   if (!digitalRead(Button_start))
   {
     recycle = true;
     delay(10);
     initSD();
-    startled();
     delay(10);
     myFile = SD.open(fileName, FILE_WRITE);
-    bip();
+    beep();
   }
   if (!digitalRead(Button_stop))
   {
     recycle = false;
     delay(10);
     myFile.close();
-    bip();
+    beep();
+
   }
-  if ( recycle )
+
+  if (!digitalRead(Button_bluetooth))
+  {
+    recycle = false;
+    beep();
+    unsigned long start;
+    start = millis();
+    while (( millis() - start) < 30000)
+    {
+      if (bluetooth.available())
+      {
+        k = bluetooth.read();
+        if ( k == 'H' )
+        {
+
+          EEPROM.get(0, filenumber);
+          fileName = "Ex_";
+          fileName += filenumber;
+          fileName += ".txt";
+          Serial.println("Sending...");
+          myFile = SD.open(fileName);
+          if (myFile)
+          {
+            while (myFile.available())
+            {
+
+              bluetooth.write(myFile.read() );
+              delay(1);
+
+            }
+            myFile.close();
+          }
+          Serial.print('T');
+        }
+      }
+      else
+        Serial.println("No DATA");
+      delay(1);
+    }
+    Serial.print("TIME OUT");
+  }
+  if (recycle)
   {
     if (myFile)
     {
@@ -91,40 +132,32 @@ void loop() {
       Serial.println("error opening test.txt");
     }
   }
-  delay(10);
 }
 
-void bip()
+void initSD()
 {
-  digitalWrite(Buzzer, HIGH);
-  delay(100);
-  digitalWrite(Buzzer, LOW);
-}
-
-void initSD() {
-
   unsigned int filenumber = 1;
   while (!filenumber == 0) {
-    fileName = "Da_";
+    fileName = "Ex_";
     fileName += filenumber;
     fileName += ".txt";
 
     while (SD.exists(fileName)) {
       filenumber++;
-      fileName = "Da_";
+      fileName = "Ex_";
       fileName += filenumber;
       fileName += ".txt";
     }
+    EEPROM.put(0, filenumber);
     myFile = SD.open(fileName, FILE_WRITE);
     myFile.close();
     return;
   }
 }
 
-void startled()
+void beep()
 {
-  digitalWrite(start_led, HIGH);
-  delay(10);
-  digitalWrite(start_led, LOW);
-  delay(90);
+  digitalWrite(buzzer, HIGH);
+  delay(100);
+  digitalWrite(buzzer, LOW);
 }
