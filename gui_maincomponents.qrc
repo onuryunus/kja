@@ -1,7 +1,7 @@
 <RCC>
   <qresource prefix="newPrefix">
-    <file>sa.png</file>
-    <file>asfsf.png</file>
-    <file>das.png</file>
+    <file>bg.png</file>
+    <file>sdcard.png</file>
+    <file>bluetooth.png</file>
   </qresource>
 </RCC>
